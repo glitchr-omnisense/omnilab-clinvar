@@ -145,6 +145,23 @@ final class ClinVarSourceTest extends TestCase
         self::assertSame('k3y', $this->calls[0]['api_key']);
     }
 
+    public function testA429IsMadeAgainOnce(): void
+    {
+        $answers = [new MockResponse('{"error":"API rate limit exceeded"}', ['http_code' => 429, 'response_headers' => ['Retry-After: 1']]), new MockResponse((string) file_get_contents(__DIR__.'/Fixtures/esummary-15333.json'))];
+        $source = (new ClinVarSourceFactory(new MockHttpClient(static function () use (&$answers): MockResponse {
+            return array_shift($answers);
+        })))->create(['throttle' => 0]);
+
+        self::assertSame('clinvar:15333', (string) $source->entity('15333')?->id, 'NCBI\'s wait, then the call again');
+
+        $twice = [new MockResponse('', ['http_code' => 429, 'response_headers' => ['Retry-After: 1']]), new MockResponse('', ['http_code' => 429, 'response_headers' => ['Retry-After: 1']])];
+        $source = (new ClinVarSourceFactory(new MockHttpClient(static function () use (&$twice): MockResponse {
+            return array_shift($twice);
+        })))->create(['throttle' => 0]);
+        $this->expectException(\Omnilab\Exception\RateLimitedException::class);
+        $source->entity('15333');
+    }
+
     public function testErrors(): void
     {
         try {

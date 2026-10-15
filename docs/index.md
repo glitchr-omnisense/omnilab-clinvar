@@ -13,6 +13,7 @@ $clinvar = (new ClinVarSourceFactory($httpClient))->create([
     'mailto' => 'support@glitchr.io',  // E-utilities' "email", as NCBI asks
     'api_key' => getenv('NCBI_API_KEY') ?: null,   // optional: ten calls a second instead of three
     'tool' => 'omnilab',               // optional: E-utilities' "tool"
+    'retries' => 1,                    // optional: a call NCBI answers 429 made again after its wait
 ]);
 ```
 
@@ -39,8 +40,9 @@ The E-utilities, `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`, database `cli
 
 Every call carries `tool` and `email` (and `api_key` when configured), as NCBI asks; the source
 waits 0.34 s between two calls without a key, 0.1 s with one. NCBI's limit is per address: on
-2026-10-15 a 429 came once while other clients shared the address - a `RateLimitedException`
-(retry after 2 s, NCBI's `Retry-After`). An unknown VariationID is `null` (esummary answers "cannot
+2026-10-15 a 429 came twice while other clients shared the address (NCBI's `Retry-After`: 2 s).
+The source makes such a call again once after the wait NCBI asks (`retries`, 1 by default; a wait
+over 10 s is not waited), then throws a `RateLimitedException`. An unknown VariationID is `null` (esummary answers "cannot
 get document summary").
 
 ## What an entity holds

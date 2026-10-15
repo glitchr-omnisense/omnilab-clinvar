@@ -3,6 +3,7 @@
 namespace Omnilab\ClinVar;
 
 use Omnilab\Exception\NotSupportedException;
+use Omnilab\Exception\RateLimitedException;
 use Omnilab\Model\Domain;
 use Omnilab\Model\Entity;
 use Omnilab\Model\Identifier;
@@ -28,8 +29,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * No key needed. NCBI asks every caller for its tool's name and an email
  * address, and for three calls a second at most without an API key, ten
- * with one: both are sent, and a 0.34 s (or 0.1 s) throttle kept. One call
- * a variation (esummary), two a search page (esearch, esummary).
+ * with one: both are sent, and a 0.34 s (or 0.1 s) throttle kept; a 429
+ * (the limit is per address, which other clients may share) is made again
+ * once after the wait NCBI asks. One call a variation (esummary), two a
+ * search page (esearch, esummary).
  */
 final class ClinVarSource extends HttpSource
 {
@@ -44,6 +47,7 @@ final class ClinVarSource extends HttpSource
     /**
      * @param string|null $email  sent with the tool's name, as NCBI asks: whom it writes to before it blocks a caller
      * @param float|null  $throttle seconds between two calls; null: NCBI's, 0.34 without a key, 0.1 with one
+     * @param int         $retries  how many times a call NCBI answers 429 is made again, after the wait it asks (10 s at most)
      */
     public function __construct(
         HttpClientInterface $http,
@@ -53,6 +57,7 @@ final class ClinVarSource extends HttpSource
         string $baseUri = self::BASE_URI,
         array $headers = [],
         ?float $throttle = null,
+        private readonly int $retries = 1,
     ) {
         parent::__construct($http, $baseUri, $headers, $throttle ?? (null === $apiKey ? 0.34 : 0.1));
     }
@@ -219,6 +224,24 @@ final class ClinVarSource extends HttpSource
             source: 'clinvar',
             related: array_filter(array_map(static fn (array $ids) => new Identifiers($ids), $related), static fn (Identifiers $ids) => \count($ids) > 0),
         );
+    }
+
+    /**
+     * A call, made again after the wait NCBI asks when it answers 429: its
+     * limit is per address, which other clients may share.
+     */
+    protected function getJson(string $path, array $query = [], array $headers = []): ?array
+    {
+        for ($attempt = 0; ; ++$attempt) {
+            try {
+                return parent::getJson($path, $query, $headers);
+            } catch (RateLimitedException $e) {
+                if ($attempt >= $this->retries || ($e->retryAfter ?? 1) > 10) {
+                    throw $e;
+                }
+                usleep((int) (max(1, $e->retryAfter ?? 1) * 1_000_000));
+            }
+        }
     }
 
     /** "2026/07/01 00:00" as "2026-07-01"; ClinVar's empty date ("1/01/01 00:00") as null. */

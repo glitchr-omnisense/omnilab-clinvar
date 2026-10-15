@@ -16,6 +16,7 @@ use Symfony\Component\HttpClient\HttpClient;
  *     api_key: '...'                   # an NCBI API key (ncbi.nlm.nih.gov, account settings); never written here
  *     tool: 'omnilab'                  # E-utilities' "tool": the name NCBI knows the application by
  *     throttle: auto                   # seconds between two calls; auto: 0.34 without a key, 0.1 with one
+ *     retries: 1                       # a call NCBI answers 429 made again after the wait it asks (10 s at most)
  *     base_uri: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
  */
 final class ClinVarSourceFactory extends SourceFactory
@@ -28,6 +29,7 @@ final class ClinVarSourceFactory extends SourceFactory
             'api_key' => null,
             'tool' => 'omnilab',
             'throttle' => 'auto',
+            'retries' => 1,
             'base_uri' => ClinVarSource::BASE_URI,
         ]);
     }
@@ -45,6 +47,7 @@ final class ClinVarSourceFactory extends SourceFactory
             (string) $c->get('base_uri', ClinVarSource::BASE_URI),
             ['User-Agent' => self::userAgent($c)],
             'auto' === $throttle ? null : (float) $throttle,
+            (int) $c->get('retries'),
         );
     }
 }
