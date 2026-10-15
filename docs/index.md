@@ -69,8 +69,10 @@ Orphanet and HPO ids; MedGen and MeSH have no scheme in the core). The `Collecto
 them: `$registry->get('ncbi')->entity($variant->related('gene')->get(Scheme::NCBI_GENE))` reads the
 gene.
 
-No source of the family reads ClinVar's or dbSNP's ids yet: there is no `Collector` path into
-ClinVar.
+The `Collector` walks from ClinVar into the GWAS Catalog by the rs id (omnilab/gwas reads `dbsnp`):
+`$collector->collect('clinvar', '15333', 1, ['gwas'])`, three calls in 1.7 s on 2026-10-15, ClinVar's
+classification and the catalogue's associations side by side. No source reads ClinVar's own ids:
+there is no path into ClinVar.
 
 ## The search
 

@@ -31,6 +31,8 @@ omnilab:
 ```
 
 A variation is named in the core's `clinvar` scheme (`clinvar:15333`, displayed `VCV000015333`).
+The `Collector` walks from ClinVar into the GWAS Catalog by its rs id
+(`$collector->collect('clinvar', '15333', 1, ['gwas'])`).
 
 ## Terms of use
 
