@@ -1,0 +1,46 @@
+{
+    "name": "omnilab/clinvar",
+    "type": "library",
+    "description": "Omnilab ClinVar: a variation by its VariationID or VCV accession - its name, type, germline classification, review status, conditions, genes, protein change, consequence, location, SPDI, allele frequencies, aliases - its dbSNP id as a cross-reference, its genes and conditions (Mondo, OMIM, Orphanet, HPO) as related things, and a search in ClinVar's query language, through the NCBI's E-utilities, no key needed.",
+    "keywords": [
+        "science",
+        "biology",
+        "clinvar",
+        "ncbi",
+        "variants",
+        "clinical significance",
+        "genetics",
+        "omnilab"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Marco Meyer",
+            "email": "marco.meyer@glitchr.io"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "glitchr/omnilab": "^1.0@dev",
+        "symfony/http-client": "^6.4|^7.0|^8.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Omnilab\\ClinVar\\": ""
+        },
+        "exclude-from-classmap": [
+            "/Tests/"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Omnilab\\ClinVar\\Tests\\": "Tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
