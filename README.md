@@ -1,6 +1,6 @@
 # omnilab/clinvar
 
-ClinVar for [glitchr/omnilab](https://github.com/glitchr-studio/omnilab), through the NCBI's
+ClinVar for [omniscient/omnilab](https://github.com/glitchr-studio/omnilab), through the NCBI's
 E-utilities: a variation by its VariationID (`15333`) or VCV accession (`VCV000015333`) with its
 name, type, germline classification, review status and date, the conditions it was classified
 for, its genes, protein change, molecular consequence, location, SPDI, allele frequencies, aliases
