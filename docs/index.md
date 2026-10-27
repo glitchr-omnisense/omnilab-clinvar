@@ -1,5 +1,11 @@
 # omnilab/clinvar
 
+ClinVar, through the NCBI's E-utilities (`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`, database
+`clinvar`), for [omnisense/omnilab](https://github.com/glitchr-omnisense/omnilab): variations by
+VariationID or VCV accession - classification, review status, conditions, genes, protein change,
+location, SPDI, allele frequencies - with their dbSNP id, as entities, their genes and conditions as
+related things; a search in ClinVar's query language. No key needed.
+
 ## Installation
 
 ```sh
@@ -16,6 +22,48 @@ $clinvar = (new ClinVarSourceFactory($httpClient))->create([
     'retries' => 1,                    // optional: a call NCBI answers 429 made again after its wait
 ]);
 ```
+
+## Credentials
+
+None needed: the E-utilities answer three calls a second without a key. An NCBI API key (an NCBI
+account's settings, ncbi.nlm.nih.gov) raises it to ten: give it as `api_key`. NCBI asks every
+caller for the tool's name and an email address: `tool` and `mailto` are sent with every call.
+
+## Options
+
+The factory's options, with the defaults it applies (`ClinVarSourceFactory`):
+
+| Option | Type | Default | Required | Effect |
+|---|---|---|---|---|
+| `api_key` | `?string` | null | no | an NCBI API key, sent as `api_key`; ten calls a second instead of three |
+| `tool` | `string` | `omnilab` | no | E-utilities' `tool`: the name NCBI knows the application by |
+| `retries` | `int` | `1` | no | how many times a call NCBI answers 429 is made again, after the wait it asks (a wait over 10 s is not waited); then a `RateLimitedException` |
+| `mailto` | `?string` | null | no | a contact address: E-utilities' `email` with every call, and in the User-Agent |
+| `user_agent` | `?string` | null | no | the whole User-Agent, in place of the one made from `mailto` |
+| `throttle` | `float\|string` | `auto` | no | seconds left between two calls; `auto`: 0.34 without a key, 0.1 with one, as NCBI asks |
+| `base_uri` | `string` | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/` | no | the API the source calls |
+
+## Capabilities
+
+`capabilities()` answers `entity`, `search`, `cross_references`; an operation it does not answer throws `NotSupportedException` before any call.
+
+| Capability | Supported | |
+|---|---|---|
+| `entity` | yes | a VariationID (`15333`, `clinvar:`, `VCV000015333`, versioned or not, its page); a dbSNP id, an RCV or SCV accession, another base refused before any call; one call |
+| `search` | yes | ClinVar's query language (an rs id, a gene, a condition, fields: `HBB[gene] AND pathogenic[clinsig]`), the most recent first, 200 a page at most, with a `total`; two calls a page |
+| `series` | no |  |
+| `products` | no |  |
+| `occurrences` | no |  |
+| `datasets` | no |  |
+| `jobs` | no |  |
+| `open` | no |  |
+| `structure` | no |  |
+| `cross_references` | yes | its dbSNP id; its genes (NCBI Gene) and conditions (Mondo, OMIM, Orphanet, HPO) are `related` |
+| `forecast` | no |  |
+| `historical` | no |  |
+| `area` | no |  |
+| `station` | no |  |
+| `cloud_cover` | no |  |
 
 ## The scheme
 
@@ -73,8 +121,10 @@ gene.
 
 The `Collector` walks from ClinVar into the GWAS Catalog by the rs id (omnilab/gwas reads `dbsnp`):
 `$collector->collect('clinvar', '15333', 1, ['gwas'])`, three calls in 1.7 s on 2026-10-15, ClinVar's
-classification and the catalogue's associations side by side. No source reads ClinVar's own ids:
-there is no path into ClinVar.
+classification and the catalogue's associations side by side. Into ClinVar: omnilab/wikidata
+reads an item's ClinVar Variation ID (P1929) as a cross-reference, so the `Collector` follows a
+Wikidata item into ClinVar - and offers a ClinVar variation's id to Wikidata, which looks items up
+by it.
 
 ## The search
 
@@ -88,6 +138,59 @@ The submissions themselves (SCV: each submitter's classification and evidence), 
 (variation-condition pairs), the variation's full XML (`efetch` with `rettype=vcv`: HGVS on every
 transcript, the review's details), MedGen's concepts, and the somatic classifications' details.
 
+## Example
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Omnilab\ClinVar\ClinVarSourceFactory;
+use Omnilab\Model\Scheme;
+use Omnilab\Source\Query;
+use Symfony\Component\HttpClient\HttpClient;
+
+$clinvar = (new ClinVarSourceFactory(HttpClient::create()))->create([
+    'mailto' => 'you@example.org',                 // E-utilities' "email"
+    'api_key' => getenv('NCBI_API_KEY') ?: null,   // optional: ten calls a second instead of three
+]);
+
+$hbs = $clinvar->entity('VCV000015333');
+echo $hbs->id->display(), ' ', $hbs->label, ': ', $hbs->value('classification'), ' (', $hbs->value('review_status'), '), ', $hbs->identifier(Scheme::DBSNP), ', ', count($hbs->properties('condition')), " conditions\n";
+
+$page = $clinvar->search(new Query('HBB[gene] AND pathogenic[clinsig]', limit: 3));
+printf("%d pathogenic variations of HBB; the latest %d:\n", $page->total, count($page));
+foreach ($page as $variation) {
+    echo '  ', $variation->id->display(), '  ', $variation->label, "\n";
+}
+```
+
+```
+VCV000015333 NM_000518.5(HBB):c.20A>T (p.Glu7Val): Pathogenic (criteria provided, multiple submitters, no conflicts), rs334, 16 conditions
+635 pathogenic variations of HBB; the latest 3:
+  VCV005019560  NM_000518.5(HBB):c.91_93-3del (p.Arg31=)
+  VCV005008196  NM_000518.5(HBB):c.11T>G (p.Leu4Arg)
+  VCV004974749  GRCh38/hg38 11p15.4(chr11:4793595-7562692)x1
+```
+
+(as answered on 2026-10-27, without a key: three calls, 0.34 s apart)
+
+```yaml
+# config/packages/omnilab.yaml
+omnilab:
+    sources:
+        clinvar: { factory: clinvar, options: { mailto: '%env(OMNILAB_MAILTO)%', api_key: '%env(default::NCBI_API_KEY)%' } }
+```
+
+## Errors
+
+Every call goes through `HttpSource`: a 404 or a 410 (and a 204) is null - an empty page for a list -; a 429 is a `RateLimitedException` (`retryAfter` from `Retry-After`); a 5xx, a time-out or a host that does not answer an `UnavailableException`; any other 4xx a `ProviderException` with its `status` and what the service said; an answer that is not JSON a `ProviderException`, a web page answered for JSON an `UnavailableException`.
+
+ClinVar's own: a 429 is made again `retries` times after the wait NCBI's `Retry-After` asks (10 s
+at most), then thrown as a `RateLimitedException`. An unknown VariationID is null (esummary
+answers "cannot get document summary"). Before any call: a dbSNP id, an RCV or SCV accession, an
+identifier of another base (`NotSupportedException`).
+
 ## Verified, and not
 
 Against the real service on 2026-10-15: the sickle cell variant VCV000015333 (pathogenic, 16
@@ -96,5 +199,19 @@ its page; an unknown VariationID; the search for rs334 (ten variations, in pages
 HBB's pathogenic variations; its gene read from NCBI Gene. The fixtures in `Tests/Fixtures/` are its
 answers. Each call took 0.3 to 0.8 s.
 
+Again on 2026-10-27, without a key: VCV000015333 (pathogenic, 16 conditions, rs334) and HBB's
+pathogenic variations (635; the example above).
+
 Not verified: a somatic (clinical impact, oncogenicity) classification (the code reads the fields
 the summary holds; none was met here); an API key (none used).
+
+## Responsibility
+
+This package is an independent, unofficial client: it is not affiliated with, endorsed by or
+sponsored by the NCBI or the U.S. National Library of Medicine. ClinVar asks whoever distributes or
+copies its data to attribute ClinVar and cite one of its publications
+([its usage page](https://www.ncbi.nlm.nih.gov/clinvar/docs/maintenance_use/)), and the
+E-utilities ask for the tool's name, an email and their rate, as the README's
+[Terms of use](https://github.com/glitchr-omnisense/omnilab-clinvar#terms-of-use) says. Whoever runs the package is responsible for complying
+with these terms and for any use made of what it returns: see the README's
+[Responsibility](https://github.com/glitchr-omnisense/omnilab-clinvar#responsibility) section.
