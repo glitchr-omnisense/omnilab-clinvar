@@ -1,0 +1,50 @@
+{
+    "$schema": "https://github.com/glitchr-omnisense/contracts/blob/1.x/resources/usage-policy.schema.json",
+    "provider": "clinvar",
+    "rateLimits": [
+        {
+            "max": 3,
+            "window": "second",
+            "every": 1,
+            "scope": "client-ip",
+            "operations": [],
+            "note": "E-utilities, without an API key, per IP address; with an api_key: 10 requests a second for all activity from that key (scope key)."
+        }
+    ],
+    "concurrency": null,
+    "rights": {
+        "commercial": "allowed",
+        "openSourceRequired": null,
+        "caching": {
+            "permission": "allowed",
+            "maxTtl": null
+        },
+        "storage": "allowed",
+        "redistribution": "allowed",
+        "attribution": {
+            "required": true,
+            "text": "ClinVar (NCBI), cite a ClinVar publication",
+            "url": "https://www.ncbi.nlm.nih.gov/clinvar/docs/maintenance_use/",
+            "where": [
+                "source",
+                "credits"
+            ]
+        },
+        "licence": null
+    },
+    "requirements": {
+        "key": false,
+        "userAgent": {
+            "required": true,
+            "pattern": null
+        }
+    },
+    "provenance": {
+        "terms": "https://www.ncbi.nlm.nih.gov/home/about/policies/",
+        "policy": "https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/",
+        "verifiedAt": "2026-11-10",
+        "declaredBy": "maintainer",
+        "contact": "eutilities@ncbi.nlm.nih.gov",
+        "notes": "All calls go to E-utilities (https://eutils.ncbi.nlm.nih.gov/entrez/eutils/). Read 2026-11-10: NCBI Insights (3 requests/s per IP without a key, 10/s per key), NCBI policies (no restriction on use or distribution, submitters may hold rights; a service built on E-utilities must make the NCBI Disclaimer and Copyright notice evident to its users). Live header X-RateLimit-Limit: 3 (keyless). The ClinVar usage page (clinvar/docs/maintenance_use) and the E-utilities book sit behind a reCAPTCHA check and could not be read: the attribution request (attribute ClinVar as a data source and cite a ClinVar publication when distributing or copying its data) comes from a search excerpt of that page and this package README; tool and email parameters likewise from search excerpts of the E-utilities book (userAgent.required stands for them). No data licence is named."
+    }
+}

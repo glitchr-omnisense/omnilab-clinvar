@@ -14,6 +14,7 @@ use Omnilab\Source\Capability;
 use Omnilab\Source\HttpSource;
 use Omnilab\Source\Page;
 use Omnilab\Source\Query;
+use Omnisense\Contracts\Policy\UsagePolicy;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -60,6 +61,23 @@ final class ClinVarSource extends HttpSource
         private readonly int $retries = 1,
     ) {
         parent::__construct($http, $baseUri, $headers, $throttle ?? (null === $apiKey ? 0.34 : 0.1));
+    }
+
+    /**
+     * E-utilities' figure without a key (policy.json: 3 a second per
+     * address); with an api_key, 10 a second counted per key, as NCBI's
+     * API-key pages said on 2026-11-10.
+     */
+    public function usagePolicy(): UsagePolicy
+    {
+        $declared = parent::usagePolicy();
+        if (null === $this->apiKey || '' === $this->apiKey) {
+            return $declared;
+        }
+
+        return UsagePolicy::fromArray(array_replace($declared->toArray(), [
+            'rateLimits' => [['max' => 10, 'window' => 'second', 'scope' => 'key', 'note' => 'E-utilities with an api_key.']],
+        ]));
     }
 
     public function getName(): string

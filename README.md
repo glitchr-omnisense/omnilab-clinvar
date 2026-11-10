@@ -44,6 +44,18 @@ The E-utilities ask for the tool's name and an email address with every call, an
 second at most without an API key (ten with one): the source sends both and waits 0.34 s (0.1 s)
 between two calls. The key is an option, never written in the package.
 
+## Usage policy
+
+Declared as data in [`policy.json`](policy.json) (read at https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities/ on 2026-11-10), and honoured on every request by the
+core: a limit reached waits when its window ends within `max_wait` seconds, else the request is not
+sent ([Usage policies](https://github.com/glitchr-omnisense/omnilab/blob/1.x/docs/policies.md)).
+
+- Limits: 3 a second per client-ip.
+- Licence: not stated; commercial use: allowed.
+- Credit: required: ClinVar (NCBI), cite a ClinVar publication (https://www.ncbi.nlm.nih.gov/clinvar/docs/maintenance_use/).
+- Needs: a User-Agent.
+- With an `api_key`: 10 a second, per key (`ClinVarSource::usagePolicy()`).
+
 ## Responsibility
 
 This package is an independent, unofficial client: it is not affiliated with, endorsed by or
