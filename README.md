@@ -34,6 +34,34 @@ A variation is named in the core's `clinvar` scheme (`clinvar:15333`, displayed 
 The `Collector` walks from ClinVar into the GWAS Catalog by its rs id
 (`$collector->collect('clinvar', '15333', 1, ['gwas'])`).
 
+## Install and a first call
+
+```sh
+composer require omnilab/clinvar
+```
+
+A real call, with no account and no key: the sickle-cell variant in ClinVar. `mailto` is your
+address, sent in the User-Agent so that the service can reach you before it blocks a caller; the
+source keeps to the limits its [`policy.json`](policy.json) declares.
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+use Omnilab\ClinVar\ClinVarSourceFactory;
+
+$clinvar = (new ClinVarSourceFactory())->create(['mailto' => 'you@example.org']);   // your address, in the User-Agent
+$hbs = $clinvar->entity('VCV000015333');
+echo $hbs->label, ': ', $hbs->value('classification'), "\n";
+```
+
+Its output on 2026-11-13:
+
+```
+NM_000518.5(HBB):c.20A>T (p.Glu7Val): Pathogenic
+```
+
 ## Terms of use
 
 ClinVar asks whoever distributes or copies its data to attribute ClinVar as a data source and to
